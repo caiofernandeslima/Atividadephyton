@@ -1,4 +1,4 @@
-"""Script opcional para popular o banco com dados de exemplo.
+"""Script opcional para inserir dados de exemplo no banco.
 
 Uso: python seed.py
 """
@@ -47,16 +47,27 @@ CHAMADOS = [
 
 def executar():
     with app.app_context():
-        if usuario_service.listar_usuarios():
+        usuarios_existentes = usuario_service.listar_usuarios()
+
+        if usuarios_existentes:
             print("Banco já possui dados. Nada foi inserido.")
             return
 
-        usuarios = [usuario_service.criar_usuario(dados) for dados in USUARIOS]
+        usuarios = []
+        for dados_usuario in USUARIOS:
+            usuarios.append(usuario_service.criar_usuario(dados_usuario))
 
-        for dados in CHAMADOS:
-            payload = {k: v for k, v in dados.items() if k != "usuario_indice"}
-            payload["usuario_id"] = usuarios[dados["usuario_indice"]].id
-            chamado_service.criar_chamado(payload)
+        for chamado in CHAMADOS:
+            dados_chamado = {
+                chave: valor
+                for chave, valor in chamado.items()
+                if chave != "usuario_indice"
+            }
+
+            indice_usuario = chamado["usuario_indice"]
+            dados_chamado["usuario_id"] = usuarios[indice_usuario].id
+
+            chamado_service.criar_chamado(dados_chamado)
 
         # Demonstra o fluxo de status: Aberto -> Em atendimento -> Encerrado
         try:
