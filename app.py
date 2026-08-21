@@ -1,4 +1,4 @@
-"""Ponto de entrada da aplicação HelpDesk (Flask + SQLAlchemy + SQLite)."""
+"""Arquivo principal da aplicação HelpDesk usando Flask, SQLAlchemy e SQLite."""
 
 import os
 
@@ -14,62 +14,66 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 def create_app():
-    app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "helpdesk.db")
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.json.sort_keys = False
+    aplicacao = Flask(__name__)
 
-    init_db(app)
+    caminho_banco = os.path.join(BASE_DIR, "helpdesk.db")
+    aplicacao.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + caminho_banco
+    aplicacao.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    aplicacao.json.sort_keys = False
 
-    app.register_blueprint(usuario_bp)
-    app.register_blueprint(chamado_bp)
-    app.register_blueprint(estatistica_bp)
+    init_db(aplicacao)
 
-    registrar_tratadores_de_erro(app)
+    aplicacao.register_blueprint(usuario_bp)
+    aplicacao.register_blueprint(chamado_bp)
+    aplicacao.register_blueprint(estatistica_bp)
 
-    @app.get("/")
+    registrar_tratadores_de_erro(aplicacao)
+
+    @aplicacao.get("/")
     def index():
-        return jsonify(
-            {
-                "aplicacao": "API HelpDesk",
-                "endpoints": [
-                    "GET    /usuarios",
-                    "GET    /usuarios/<id>",
-                    "POST   /usuarios",
-                    "PUT    /usuarios/<id>",
-                    "DELETE /usuarios/<id>",
-                    "GET    /usuarios/<id>/chamados",
-                    "GET    /chamados",
-                    "GET    /chamados/<id>",
-                    "POST   /chamados",
-                    "PUT    /chamados/<id>",
-                    "DELETE /chamados/<id>",
-                    "PATCH  /chamados/<id>/iniciar",
-                    "PATCH  /chamados/<id>/encerrar",
-                    "GET    /chamados/abertos",
-                    "GET    /chamados/prioridade/alta",
-                    "GET    /estatisticas",
-                ],
-            }
-        ), 200
+        endpoints = [
+            "GET    /usuarios",
+            "GET    /usuarios/<id>",
+            "POST   /usuarios",
+            "PUT    /usuarios/<id>",
+            "DELETE /usuarios/<id>",
+            "GET    /usuarios/<id>/chamados",
+            "GET    /chamados",
+            "GET    /chamados/<id>",
+            "POST   /chamados",
+            "PUT    /chamados/<id>",
+            "DELETE /chamados/<id>",
+            "PATCH  /chamados/<id>/iniciar",
+            "PATCH  /chamados/<id>/encerrar",
+            "GET    /chamados/abertos",
+            "GET    /chamados/prioridade/alta",
+            "GET    /estatisticas",
+        ]
 
-    return app
+        return jsonify({
+            "aplicacao": "API HelpDesk",
+            "endpoints": endpoints,
+        }), 200
+
+    return aplicacao
 
 
-def registrar_tratadores_de_erro(app):
-    """Converte exceções de negócio em respostas JSON com o código HTTP adequado."""
+def registrar_tratadores_de_erro(aplicacao):
+    """Configura as respostas JSON utilizadas quando ocorre algum erro."""
 
-    @app.errorhandler(RegraDeNegocioError)
+    @aplicacao.errorhandler(RegraDeNegocioError)
     def tratar_regra_de_negocio(erro):
-        return jsonify({"erro": erro.mensagem}), erro.status_code
+        resposta = {"erro": erro.mensagem}
+        return jsonify(resposta), erro.status_code
 
-    @app.errorhandler(HTTPException)
+    @aplicacao.errorhandler(HTTPException)
     def tratar_http(erro):
-        return jsonify({"erro": erro.description}), erro.code
+        resposta = {"erro": erro.description}
+        return jsonify(resposta), erro.code
 
-    @app.errorhandler(Exception)
+    @aplicacao.errorhandler(Exception)
     def tratar_inesperado(erro):
-        app.logger.exception(erro)
+        aplicacao.logger.exception(erro)
         return jsonify({"erro": "Erro interno no servidor."}), 500
 
 
