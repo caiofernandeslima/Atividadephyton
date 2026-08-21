@@ -1,4 +1,4 @@
-"""Regras de negócio de Usuario."""
+"""Regras de negócio relacionadas aos usuários."""
 
 from models.usuario import Usuario
 from repositories import chamado_repository, usuario_repository
@@ -6,18 +6,23 @@ from services.exceptions import ConflitoError, NaoEncontradoError, ValidacaoErro
 
 
 def _texto(valor):
-    return valor.strip() if isinstance(valor, str) else valor
+    if isinstance(valor, str):
+        return valor.strip()
+    return valor
 
 
 def listar_usuarios():
-    return usuario_repository.listar_todos()
+    usuarios = usuario_repository.listar_todos()
+    return usuarios
 
 
 def buscar_usuario(usuario_id):
-    usuario = usuario_repository.buscar_por_id(usuario_id)
-    if usuario is None:
+    usuario_encontrado = usuario_repository.buscar_por_id(usuario_id)
+
+    if usuario_encontrado is None:
         raise NaoEncontradoError(f"Usuário {usuario_id} não encontrado.")
-    return usuario
+
+    return usuario_encontrado
 
 
 def criar_usuario(dados):
@@ -25,43 +30,60 @@ def criar_usuario(dados):
     email = _texto(dados.get("email"))
     setor = _texto(dados.get("setor"))
 
-    # Nome é obrigatório
+    # Verifica se o nome foi informado
     if not nome:
         raise ValidacaoError("O campo 'nome' é obrigatório.")
 
-    # E-mail é obrigatório
+    # Verifica se o e-mail foi informado
     if not email:
         raise ValidacaoError("O campo 'email' é obrigatório.")
 
-    # Não permitir dois usuários com o mesmo e-mail
-    if usuario_repository.buscar_por_email(email) is not None:
-        raise ConflitoError(f"Já existe um usuário cadastrado com o e-mail '{email}'.")
+    # Evita cadastro de e-mails repetidos
+    usuario_existente = usuario_repository.buscar_por_email(email)
 
-    usuario = Usuario(nome=nome, email=email, setor=setor)
-    return usuario_repository.salvar(usuario)
+    if usuario_existente is not None:
+        raise ConflitoError(
+            f"Já existe um usuário cadastrado com o e-mail '{email}'."
+        )
+
+    novo_usuario = Usuario(
+        nome=nome,
+        email=email,
+        setor=setor
+    )
+
+    return usuario_repository.salvar(novo_usuario)
 
 
 def atualizar_usuario(usuario_id, dados):
     usuario = buscar_usuario(usuario_id)
 
     if "nome" in dados:
-        nome = _texto(dados.get("nome"))
-        if not nome:
+        novo_nome = _texto(dados.get("nome"))
+
+        if not novo_nome:
             raise ValidacaoError("O campo 'nome' é obrigatório.")
-        usuario.nome = nome
+
+        usuario.nome = novo_nome
 
     if "email" in dados:
-        email = _texto(dados.get("email"))
-        if not email:
+        novo_email = _texto(dados.get("email"))
+
+        if not novo_email:
             raise ValidacaoError("O campo 'email' é obrigatório.")
 
-        existente = usuario_repository.buscar_por_email(email)
-        if existente is not None and existente.id != usuario.id:
-            raise ConflitoError(f"Já existe um usuário cadastrado com o e-mail '{email}'.")
-        usuario.email = email
+        usuario_existente = usuario_repository.buscar_por_email(novo_email)
+
+        if usuario_existente is not None and usuario_existente.id != usuario.id:
+            raise ConflitoError(
+                f"Já existe um usuário cadastrado com o e-mail '{novo_email}'."
+            )
+
+        usuario.email = novo_email
 
     if "setor" in dados:
-        usuario.setor = _texto(dados.get("setor"))
+        novo_setor = _texto(dados.get("setor"))
+        usuario.setor = novo_setor
 
     return usuario_repository.atualizar(usuario)
 
@@ -69,8 +91,10 @@ def atualizar_usuario(usuario_id, dados):
 def remover_usuario(usuario_id):
     usuario = buscar_usuario(usuario_id)
 
-    # Não permitir excluir um usuário que possua chamados cadastrados
-    if chamado_repository.listar_por_usuario(usuario.id):
+    chamados_usuario = chamado_repository.listar_por_usuario(usuario.id)
+
+    # Usuários com chamados cadastrados não podem ser removidos
+    if chamados_usuario:
         raise ConflitoError(
             "Não é possível excluir um usuário que possui chamados cadastrados."
         )
@@ -80,4 +104,6 @@ def remover_usuario(usuario_id):
 
 def listar_chamados_do_usuario(usuario_id):
     usuario = buscar_usuario(usuario_id)
-    return chamado_repository.listar_por_usuario(usuario.id)
+    chamados = chamado_repository.listar_por_usuario(usuario.id)
+
+    return chamados
