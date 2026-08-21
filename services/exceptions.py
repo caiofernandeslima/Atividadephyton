@@ -1,7 +1,6 @@
-"""Exceções de negócio compartilhadas pelos services.
+"""Exceções utilizadas nas regras de negócio da aplicação.
 
-Cada exceção carrega o código HTTP que o controller deve devolver,
-mantendo os services livres de dependências do Flask.
+Cada tipo de erro possui um código HTTP correspondente.
 """
 
 
@@ -9,23 +8,23 @@ class RegraDeNegocioError(Exception):
     status_code = 400
 
     def __init__(self, mensagem):
-        super().__init__(mensagem)
         self.mensagem = mensagem
+        super().__init__(mensagem)
 
 
 class ValidacaoError(RegraDeNegocioError):
-    """Dados inválidos enviados pelo cliente."""
+    """Erro utilizado quando os dados recebidos são inválidos."""
 
     status_code = 400
 
 
 class NaoEncontradoError(RegraDeNegocioError):
-    """Recurso inexistente."""
+    """Erro utilizado quando um registro não é encontrado."""
 
     status_code = 404
 
 
 class ConflitoError(RegraDeNegocioError):
-    """Operação conflita com o estado atual dos dados (ex.: e-mail duplicado)."""
+    """Erro utilizado quando uma operação gera conflito com os dados existentes."""
 
     status_code = 409
